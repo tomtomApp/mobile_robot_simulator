@@ -64,7 +64,7 @@ class Simple_path_follower():
                     else:
                         break
             self.last_indx = min_indx
-            #print(min_indx)
+            print(min_indx)
             self.targetwp_num_pub.publish(min_indx)
 
             #check goal

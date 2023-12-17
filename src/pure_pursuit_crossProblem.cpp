@@ -330,6 +330,7 @@ void Pure_Pursuit::update_cmd_vel()
         // calculate target yaw rate
         float target_yaw = std::atan2(target_lookahed_y - current_y, target_lookahed_x - current_x);
         float yaw_diff = target_yaw - current_yaw_euler;
+        
         //std::cout << current_yaw_euler << std::endl;
 
         // float/double型の割り算の余りを求める方法【浮動小数点数の剰余】
@@ -351,14 +352,26 @@ void Pure_Pursuit::update_cmd_vel()
         //change velocity according to curvature (asteroid)
         float target_speed = (maxVelocity-minVelocity) * pow(sin(acos(std::cbrt(curvature))), 3) + minVelocity; //[m/s]   
         current_vel = target_speed;
-
+        target_speed = 1.0;
+        if (distance != 0) {
+        	yaw_rate = (2.0 * target_speed * std::sin(yaw_diff)) / distance;
+        }
+        else{
+        	yaw_rate = cmd_vel.angular.z;
+	}
+	if (yaw_rate > M_PI) {
+            yaw_rate = fmod(yaw_rate, M_PI);
+        } else if (yaw_rate < -M_PI) {
+            yaw_rate = fmod(yaw_rate, -M_PI);
+        }
+        /*
         float alpha = dist_sp_from_nearest / target_speed;
         if (alpha != 0) {
             yaw_rate = std::abs(yaw_diff) / alpha;
         } else {
             yaw_rate = 0.0;
-        }
-
+        }*/
+        /*
         // check vehicle orientation and target yaw
         if (std::abs(target_yaw - current_yaw_euler) < M_PI) {
             if (target_yaw < current_yaw_euler) {
@@ -368,7 +381,7 @@ void Pure_Pursuit::update_cmd_vel()
             if (target_yaw > current_yaw_euler) {
                 yaw_rate = yaw_rate * (-1.0);
             }
-        }
+        }*/
 
         // publish cmd_vel
         cmd_vel.linear.x = target_speed;

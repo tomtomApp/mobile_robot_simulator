@@ -22,8 +22,8 @@ class Path_Publisher():
         #self.csv_data = pd.read_csv("~/catkin_ws/src/mobile_robot_simulator/path/path_data_1106_4.csv")
         #self.csv_data = pd.read_csv("~/catkin_ws/src/mobile_robot_simulator/path/divide_path1_1106.csv")
         #self.csv_data1 = pd.read_csv("~/catkin_ws/src/mobile_robot_simulator/path/divide_path2_1106.csv")
-        self.csv_data = pd.read_csv("~/catkin_ws/src/mobile_robot_simulator/path/simulation_path.csv")
-        #self.csv_data = pd.read_csv("~/catkin_ws/src/mobile_robot_simulator/path/gnss_log_tukuba1104.csv")
+        #self.csv_data = pd.read_csv("~/catkin_ws/src/mobile_robot_simulator/path/simulation_path.csv")
+        self.csv_data = pd.read_csv("~/catkin_ws/src/mobile_robot_simulator/path/gnss_log_tukuba1104.csv")
         
 
         pose_list = self.get_poses_from_csvdata()
