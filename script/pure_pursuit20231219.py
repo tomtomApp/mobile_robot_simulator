@@ -12,8 +12,6 @@ from visualization_msgs.msg import Marker
 from nav_msgs.msg import Path, Odometry
 
 
-
-
 class pure_pursuit():
 	def __init__(self):
 		rospy.init_node('pure_pursuit2023', anonymous=True)
@@ -21,7 +19,6 @@ class pure_pursuit():
 		self.path_first_flg = False
 		self.odom_first_flg = False
 		self.position_search_flg = False
-		self.imu_first_flg = False
 		self.last_indx = 0
 
 		#initialize publisher
@@ -29,87 +26,41 @@ class pure_pursuit():
 		self.lookahed_pub = rospy.Publisher("/lookahed_marker", Marker, queue_size=50)
 		self.targetwp_num_pub = rospy.Publisher("/targetwp_num", Int32, queue_size=10)
 
-
 		#initialize subscriber
 		self.path_sub = rospy.Subscriber("/path", Path, self.cb_get_path_topic_subscriber)
 		self.odom_sub = rospy.Subscriber("/odom", Odometry, self.cb_get_odometry_subscriber)
 
-		
 		#速度
 		self.vr = 2 #[km/h]
-
 		self.start = 0
 		self.count = 0
 		self.times = 0
 		self.past = []
 		#ロボット座標と注視点との距離の設定
-		self.ld_th = 0.2
-		self.minCurvature = 0
-		self.maxCurvature = 0.5
-		self.minVelocity = 1
-		self.maxVelocity = 2
+		self.ld_th = 0.4
+
+		self.rand = 0.5
 		#self.path_follower()
 
 	def path_follower(self):
-		if self.path_first_flg == True and self.odom_first_flg:
+		if self.path_first_flg == True and self.odom_first_flg == True:
 			if self.start == 0:
 				self.start += 1
 				self.position0 = [self.path[0][0], self.path[0][1]]
-				self.laterX = self.current_x
-				self.laterY = self.current_y
-				self.attention = [self.path[0][0], self.path[0][1]]
-				#自己位置から目標位置までの距離D
-				self.D = np.sqrt(np.power(self.attention[0]-self.laterX,2)+np.power(self.attention[1]-self.laterY,2))
-				if self.D < self.ld_th:
-					imageD = 0
-					while(imageD < self.ld_th):
-						if self.times < len(self.path)-1:
-							self.times += 1
-							imageD = np.sqrt(np.power(self.path[self.times][0]-self.laterX,2)+np.power(self.path[self.times][1]-self.laterY,2))
-						else:
-							break
-				self.attention = [self.path[self.times][0], self.path[self.times][1]]
-				self.theta = np.arctan2(self.attention[1]-self.position0[1], self.attention[0]-self.position0[0])
-				self.theta = self.radian_Normalization(self.theta)
-				#始点と注視点との距離
-				ld = np.sqrt(np.power(self.attention[0]-self.position0[0],2)+np.power(self.attention[1]-self.position0[1],2))
-				self.alpha =  self.radian_Normalization(np.arctan2(self.attention[1]-self.position0[1], self.attention[0]-self.position0[0])) - self.theta
-				self.alpha = self.radian_Normalization(self.alpha)
-				self.vr = self.speed_adjust(ld, self.alpha)
-				#print('velocity:', self.vr)
-				self.omega = 2 * self.vr * np.sin(self.alpha) / ld
-
-				#Set Cmdvel
-				cmd_vel = Twist()
-				cmd_vel.linear.x = self.vr/3.6    #[m/s]
-				cmd_vel.linear.y = 0.0
-				cmd_vel.linear.z = 0.0
-				cmd_vel.angular.x = 0.0
-				cmd_vel.angular.y = 0.0
-				cmd_vel.angular.z = self.omega
-				self.cmdvel_pub.publish(cmd_vel)
-
-				self.r.sleep()
-				return
-				''''
 				self.attention = [self.path[1][0], self.path[1][1]]
 				#始点と注視点との距離
 				ld = np.sqrt(np.power(self.attention[0]-self.position0[0],2)+np.power(self.attention[1]-self.position0[1],2))
 				#min_indx = ld.argmin()
 				#初期角度
 				self.theta = self.current_yaw_euler
-				self.theta = self.radian_Normalization(self.theta)
-				self.intialTheta = self.theta
-				self.alpha =  self.radian_Normalization(np.arctan2(self.attention[1]-self.position0[1], self.attention[0]-self.position0[0])) - self.theta
+				self.alpha =  np.arctan2(self.attention[1]-self.position0[1], self.attention[0]-self.position0[0]) - self.theta
 				#print(np.degrees(self.theta))
 				#print(np.degrees(self.alpha))
 				self.omega = 2 * self.vr * np.sin(self.alpha) / ld
-				'''
+				#print(self.theta)
+				#self.R = self.vr / self.omega
 			#自己位置
 			self.count += 1
-			beforeX = self.laterX
-			beforeY = self.laterY
-			print(self.count)
 			'''
 			self.laterX = self.laterX + self.vr * np.cos(self.omega + self.theta)
 			self.laterY = self.laterY + self.vr * np.sin(self.omega + self.theta)
@@ -117,14 +68,13 @@ class pure_pursuit():
 			#print('self.current_x:',self.current_x)
 			self.laterX = self.current_x
 			self.laterY = self.current_y
-			#self.theta = self.current_yaw_euler
-			#self.theta = self.radian_Normalization(self.theta)
-			estimate_theta = self.get_radian(np.arctan2(self.laterY - beforeY, self.laterX - beforeX))
+			self.theta = self.current_yaw_euler
+			print(self.theta)
 			self.past.append([self.laterX ,self.laterY])
 			#自己位置から目標位置までの距離D
 			self.D = np.sqrt(np.power(self.attention[0]-self.laterX,2)+np.power(self.attention[1]-self.laterY,2))
-			print(estimate_theta)
-			#self.count = 0
+
+			self.count = 0
 			self.position0 = [self.laterX, self.laterY]
 			'''
 			if self.times > len(self.path)-1:
@@ -140,36 +90,19 @@ class pure_pursuit():
 						break
 			#print(self.times)
 			self.targetwp_num_pub.publish(self.times)
-			
-			'''
-			#0m回避作戦
-			if self.count < 200:
-				#print(self.count)
-				cmd_vel = Twist()
-				cmd_vel.linear.x = self.vr/3.6    #[m/s]
-				cmd_vel.linear.y = 0.0
-				cmd_vel.linear.z = 0.0
-				cmd_vel.angular.x = 0.0
-				cmd_vel.angular.y = 0.0
-				cmd_vel.angular.z = self.intialTheta
-				self.cmdvel_pub.publish(cmd_vel)
-				self.r.sleep()
-				return
-			'''
-                       #終了条件
+                       
+			#終了条件
 			if np.sqrt(np.power(self.laterX-self.path[-1][0],2)+np.power(self.laterY-self.path[-1][1],2)) < 0.3:
 				cmd_vel = Twist()
 				self.cmdvel_pub.publish(cmd_vel)
 				print("終了")
 				#self.follow_plot()
 				return
+			
 			self.attention = [self.path[self.times][0], self.path[self.times][1]]
 			#始点と注視点との距離
 			ld = np.sqrt(np.power(self.attention[0]-self.position0[0],2)+np.power(self.attention[1]-self.position0[1],2))
-			self.alpha =  self.radian_Normalization(np.arctan2(self.attention[1]-self.position0[1], self.attention[0]-self.position0[0])) - estimate_theta
-			self.alpha = self.radian_Normalization(self.alpha)
-			self.vr = self.speed_adjust(ld, self.alpha)
-			#print('velocity:', self.vr)
+			self.alpha =  np.arctan2(self.attention[1]-self.position0[1], self.attention[0]-self.position0[0]) - self.theta
 			self.omega = 2 * self.vr * np.sin(self.alpha) / ld
 
 			#Set Cmdvel
@@ -184,42 +117,26 @@ class pure_pursuit():
 
 			self.r.sleep()
 			return
-			
-	def speed_adjust(self, ld, alpha):
-		curvature = self.get_radian(self.alpha)
-		#print('radian:',curvature)
-		curvature = abs(curvature / ld)
-		#print('curvature:',curvature)
-		curvature = max(self.minCurvature, min(curvature, self.maxCurvature));
-		curvature = curvature / self.maxCurvature;
-		#vr = (self.maxVelocity-self.minVelocity) * pow(np.sin(np.arccos(curvature ** 2)), 3) + self.minVelocity; #[m/s] 
-		vr = (self.maxVelocity-self.minVelocity) * np.power(np.sin(np.arccos(np.power(curvature, 1/3))), 3) + self.minVelocity; #[m/s]   
-		return vr
+		
+	def transform_to_robot_frame(self, point, target, yaw):
+		x, y = target
+		dx = (point[0] - x)
+		dy = (point[1] - y)
+		x_in_robot = dx * math.cos(yaw) - dy * math.sin(yaw) 
+		y_in_robot = dy * math.cos(yaw) + dx * math.sin(yaw)
+		return x_in_robot, y_in_robot
 
-
-	def radian_Normalization(self, theta):
-		theta = theta % (2 * np.pi)
-		if (theta < 0):
-			theta += 2 * np.pi
-		return abs(theta)
-			
-	def get_radian(self, angle):
-		angle = (angle + np.pi) % (2 * np.pi) - np.pi
-
-		if (angle < -np.pi):
-			angle += 2*np.pi
-
-		return angle
-		'''
-		theta = theta % (2 * np.pi)
-		if (theta < 0):
-			theta += 2 * np.pi
-		return theta
-		'''
-
-	def cb_get_path_topic_subscriber(self,msg):
-		if self.path_first_flg != True:
-			self.path = np.array([[msg.poses[indx].pose.position.x, msg.poses[indx].pose.position.y] for indx in range(len(msg.poses))])
+	def cb_get_path_topic_subscriber(self, msg):
+		if self.path_first_flg != True and self.odom_first_flg ==True:
+			self.prePath = np.array([[msg.poses[indx].pose.position.x, msg.poses[indx].pose.position.y] for indx in range(len(msg.poses))])
+			point = [self.prePath[0][0], self.prePath[0][1]]
+			self.path = []
+			yaw = self.initYaw
+			for i in range(len(self.prePath)):
+				target = [self.prePath[i][0], self.prePath[i][1]] 
+				dump = self.transform_to_robot_frame(point, target, yaw)
+				self.path.append([dump[0], dump[1]])
+			self.path = np.array(self.path)
 			self.path_first_flg = True
 			print('self.path[0][0]:',self.path[0][0])
 			'''
@@ -245,14 +162,15 @@ class pure_pursuit():
 		self.current_x = msg.pose.pose.position.x
 		self.current_y = msg.pose.pose.position.y
 		e = tf.transformations.euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))
-		yaw_euler = e[2]
-		self.current_yaw_euler = yaw_euler
+		yaw_euler = e[2] + self.rand
+		if self.odom_first_flg == False:
+			self.initYaw = yaw_euler
+		self.current_yaw_euler = yaw_euler - self.initYaw
+		print(self.current_yaw_euler)
 		self.odom_first_flg = True
 		#print("odom_sub")
 		#print('current_x:',self.current_x)
 		#print('current_y:',self.current_y)
-		
-
 
 if __name__ == '__main__':
     print('Path follower is started...')

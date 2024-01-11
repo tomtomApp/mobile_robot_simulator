@@ -10,8 +10,8 @@
   <node pkg="mobile_robot_simulator" name="path_publisher" type="path_publisher.py" output="screen"/>
   
   <!--path follower-->
-  <node pkg="mobile_robot_simulator" name="pure_pursuit2023" type="pure_pursuit2023.py" output="screen"/>
-
+  <!--<node pkg="mobile_robot_simulator" name="pure_pursuit2023" type="pure_pursuit20231219.py" output="screen"/>-->
+  <node pkg="mobile_robot_simulator" name="pure_pursuit2023" type="pure_pursuit2023_ver2.py" output="screen"/>
   <!--waypoint visualizer-->
   <node pkg="mobile_robot_simulator" name="waypoint_visualizer" type="waypoint_visualizer" output="screen"/>
 
